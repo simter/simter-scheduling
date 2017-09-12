@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/base.xml"/>
+  <!-- trace < debug < info < warn < error -->
+  <root level="warn"/>
+
+  <logger name="org.springframework.scheduling" level="error"/>
+  <logger name="org.quartz" level="error"/>
+  <logger name="tech.simter.scheduling" level="debug"/>
+</configuration>
