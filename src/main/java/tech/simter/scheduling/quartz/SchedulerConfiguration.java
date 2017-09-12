@@ -3,7 +3,6 @@ package tech.simter.scheduling.quartz;
 import org.quartz.Trigger;
 import org.quartz.spi.JobFactory;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
@@ -23,8 +22,6 @@ import static org.springframework.scheduling.quartz.MethodInvokingJobDetailFacto
 public class SchedulerConfiguration implements ApplicationContextAware {
   private ApplicationContext applicationContext;
   private SchedulerFactoryBean schedulerFactory;
-  @Autowired
-  private JobFactory jobFactory;
   private final List<Trigger> triggers = new ArrayList<>();
   private int jobId = 0;
   private int triggerId = 0;
@@ -72,7 +69,7 @@ public class SchedulerConfiguration implements ApplicationContextAware {
   @Bean
   public SchedulerFactoryBean schedulerFactoryBean() {
     schedulerFactory = new SchedulerFactoryBean();
-    schedulerFactory.setJobFactory(jobFactory);
+    schedulerFactory.setJobFactory(jobFactory());
     schedulerFactory.setOverwriteExistingJobs(true);
 
     if (!triggers.isEmpty()) schedulerFactory.setTriggers(triggers.toArray(new Trigger[0]));
