@@ -7,6 +7,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
 import org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
@@ -18,6 +19,7 @@ import java.util.List;
 import static org.quartz.CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING;
 import static org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean.MethodInvokingJob;
 
+@Profile("scheduler")
 @Configuration
 public class SchedulerConfiguration implements ApplicationContextAware {
   private ApplicationContext applicationContext;
