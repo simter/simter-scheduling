@@ -1,9 +1,11 @@
 package tech.simter.scheduling.quartz;
 
+import org.quartz.CronTrigger;
 import org.quartz.Trigger;
 import org.quartz.spi.JobFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -17,6 +19,8 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.util.StringValueResolver;
 
 import javax.annotation.PostConstruct;
+import java.lang.reflect.Method;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -31,8 +35,6 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   private ApplicationContext applicationContext;
   private SchedulerFactoryBean schedulerFactory;
   private final List<Trigger> triggers = new ArrayList<>();
-  private int jobId = 0;
-  private int triggerId = 0;
   private StringValueResolver resolver;
 
   @Override
@@ -48,33 +50,66 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   @PostConstruct
   public void init() throws Exception {
     logger.info("Start initial simter-scheduler...");
+    int totalCount = 0;
     // Get all bean with @CronScheduled annotation, then schedule it
     Collection<Object> schedulers = applicationContext.getBeansWithAnnotation(CronScheduled.class).values();
     for (Object v : schedulers) {
       CronScheduled cfg = v.getClass().getAnnotation(CronScheduled.class);
       String cron = resolver.resolveStringValue(cfg.value());
-      logger.info("Initial scheduler '{}' with cron '{}'", v.getClass().getName(), cron);
+      logger.info("Initial cron '{}' for '{}({})'", cron, v.getClass().getName(), v.hashCode());
 
-      // create job
-      MethodInvokingJobDetailFactoryBean jobDetail = new MethodInvokingJobDetailFactoryBean();
-      jobDetail.setTargetObject(v);
-      jobDetail.setTargetMethod("execute"); // Fixed to invoke this method name
-      jobDetail.setName("job-" + (++jobId));
-      jobDetail.afterPropertiesSet();
-
-      // create job's trigger
-      CronTriggerFactoryBean trigger = new CronTriggerFactoryBean();
-      trigger.setJobDetail(jobDetail.getObject());
-      trigger.setCronExpression(cron);
-      trigger.setName("trigger-" + (++triggerId));
-      trigger.setStartDelay(500); //  delay 0.5s
-      trigger.setMisfireInstruction(MISFIRE_INSTRUCTION_DO_NOTHING); // avoid twice started
-      trigger.afterPropertiesSet();
+      CronTrigger trigger = createCronTrigger(v, "execute", cron); // Fixed to invoke this method name
 
       // keep it for SchedulerFactoryBean initial
-      triggers.add(trigger.getObject());
+      triggers.add(trigger);
+      totalCount++;
     }
-    logger.info("Finished initial simter-scheduler. totalCount={}", schedulers.size());
+
+    // Get all beanMethod with @CronScheduled annotation, then schedule it
+    for (String beanName : applicationContext.getBeanDefinitionNames()) {
+      Object bean = applicationContext.getBean(beanName);
+      Class<?> targetClass = AopUtils.getTargetClass(bean);
+      Method[] methods = targetClass.getDeclaredMethods();
+      for (Method m : methods) {
+        CronScheduled cfg = m.getAnnotation(CronScheduled.class);
+        if (cfg != null) {
+          String cron = resolver.resolveStringValue(cfg.value());
+          logger.info("Initial cron '{}' for '{}({})#{}'", cron,
+            targetClass.getName(), bean.hashCode(), m.getName());
+
+          CronTrigger trigger = createCronTrigger(bean, m.getName(), cron);
+
+          // keep it for SchedulerFactoryBean initial
+          triggers.add(trigger);
+          totalCount++;
+        }
+      }
+    }
+
+    logger.info("Finished initial all @CronScheduled scheduler. totalCount={}", totalCount);
+  }
+
+  private int jobId = 0;
+  private int triggerId = 0;
+
+  private CronTrigger createCronTrigger(Object bean, String methodName, String cron)
+    throws ClassNotFoundException, NoSuchMethodException, ParseException {
+    // create job
+    MethodInvokingJobDetailFactoryBean jobDetail = new MethodInvokingJobDetailFactoryBean();
+    jobDetail.setTargetObject(bean);
+    jobDetail.setTargetMethod(methodName);
+    jobDetail.setName("simter-job-" + (++jobId));
+    jobDetail.afterPropertiesSet();
+
+    // create job's trigger
+    CronTriggerFactoryBean trigger = new CronTriggerFactoryBean();
+    trigger.setJobDetail(jobDetail.getObject());
+    trigger.setCronExpression(cron);
+    trigger.setName("simter-trigger-" + (++triggerId));
+    trigger.setStartDelay(500); //  delay 500ms
+    trigger.setMisfireInstruction(MISFIRE_INSTRUCTION_DO_NOTHING); // avoid twice started
+    trigger.afterPropertiesSet();
+    return trigger.getObject();
   }
 
   /**

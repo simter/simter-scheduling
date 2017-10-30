@@ -13,15 +13,15 @@ import static org.junit.Assert.assertThat;
 
 @RunWith(SpringRunner.class)
 @ActiveProfiles("scheduler")
-@ContextConfiguration(classes = {CronSampleScheduler.class, SchedulerConfiguration.class})
-public class CronSampleSchedulerTest {
+@ContextConfiguration(classes = {CronScheduledOnMethod.class, SchedulerConfiguration.class})
+public class CronScheduledOnMethodTest {
   @Inject
-  private CronSampleScheduler cronSampleScheduler;
+  private CronScheduledOnMethod scheduler;
 
   @Test
-  public void doExecute() throws InterruptedException {
+  public void test() throws InterruptedException {
     int seconds = 2;
     Thread.sleep(seconds * 1000);
-    assertThat(cronSampleScheduler.getCount(), greaterThanOrEqualTo(seconds));
+    assertThat(scheduler.getCount(), greaterThanOrEqualTo(seconds));
   }
 }

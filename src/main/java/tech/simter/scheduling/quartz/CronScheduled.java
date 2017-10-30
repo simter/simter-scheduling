@@ -9,7 +9,7 @@ import java.lang.annotation.*;
  * <p>
  * The {@link CronScheduled#value()} must be a valid cron expression.
  */
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface CronScheduled {
