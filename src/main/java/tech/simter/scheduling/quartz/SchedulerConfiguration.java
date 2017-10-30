@@ -126,6 +126,10 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
     schedulerFactory.setJobFactory(jobFactory());
     schedulerFactory.setOverwriteExistingJobs(true);
 
+    schedulerFactory.setWaitForJobsToCompleteOnShutdown(true);
+    schedulerFactory.setAutoStartup(true);
+    schedulerFactory.setSchedulerName("simter-quartz-scheduler");
+
     if (!triggers.isEmpty()) schedulerFactory.setTriggers(triggers.toArray(new Trigger[0]));
     else throw new IllegalArgumentException("No usable schedule job to start.");
     return schedulerFactory;
