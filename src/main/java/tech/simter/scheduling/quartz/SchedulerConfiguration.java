@@ -120,7 +120,7 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
     jobDetail.setTargetObject(bean);
     jobDetail.setTargetMethod(methodName);
     jobDetail.setGroup(group);
-    jobDetail.setName(name == null || name.isEmpty() ? "simter-job-" + (++jobId) : name);
+    jobDetail.setName(name == null || name.isEmpty() ? bean.getClass().getSimpleName() + "#" + methodName : name);
     jobDetail.afterPropertiesSet();
 
     // create job's trigger
