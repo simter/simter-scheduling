@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EmbeddedValueResolverAware;
@@ -23,8 +24,10 @@ import javax.annotation.PostConstruct;
 import java.lang.reflect.Method;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.quartz.CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING;
 import static org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean.MethodInvokingJob;
@@ -36,6 +39,9 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   private ApplicationContext applicationContext;
   private StringValueResolver resolver;
   private List<Trigger> triggers;
+
+  @Value("${app.ignoreBeanNames:#{null}}")
+  private String[] ignoreBeanNames;
 
   @Override
   public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -71,9 +77,12 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
     }
 
     // Get all beanMethod with @CronScheduled annotation, then schedule it
+    List<String> ignoreBeanNames = this.ignoreBeanNames == null ? null :
+      Arrays.stream(this.ignoreBeanNames).collect(Collectors.toList());
     for (String beanName : applicationContext.getBeanDefinitionNames()) {
       // make sure schedulerFactoryBean init after this method run
-      if (beanName.equalsIgnoreCase("schedulerConfiguration") || beanName.equalsIgnoreCase("schedulerFactoryBean")) {
+      if (beanName.equalsIgnoreCase("schedulerConfiguration") || beanName.equalsIgnoreCase("schedulerFactoryBean")
+        || (ignoreBeanNames != null && ignoreBeanNames.contains(beanName))) {
         continue;
       }
 
@@ -135,7 +144,7 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
    * @return the schedulerFactory bean
    */
   @Bean(name = "schedulerFactoryBean")
-  @DependsOn("jobFactory")
+  @DependsOn({"schedulerConfiguration", "jobFactory"})
   public SchedulerFactoryBean schedulerFactoryBean() {
     SchedulerFactoryBean schedulerFactory = new SchedulerFactoryBean();
     schedulerFactory.setApplicationContext(this.applicationContext);
