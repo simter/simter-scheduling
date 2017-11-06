@@ -12,6 +12,7 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.EmbeddedValueResolverAware;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.quartz.CronTriggerFactoryBean;
 import org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean;
@@ -29,13 +30,12 @@ import static org.quartz.CronTrigger.MISFIRE_INSTRUCTION_DO_NOTHING;
 import static org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean.MethodInvokingJob;
 
 @Profile("scheduler")
-@Configuration
+@Configuration("schedulerConfiguration")
 public class SchedulerConfiguration implements ApplicationContextAware, EmbeddedValueResolverAware {
   private static Logger logger = LoggerFactory.getLogger(SchedulerConfiguration.class);
   private ApplicationContext applicationContext;
-  private SchedulerFactoryBean schedulerFactory;
-  private final List<Trigger> triggers = new ArrayList<>();
   private StringValueResolver resolver;
+  private List<Trigger> triggers;
 
   @Override
   public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
@@ -49,16 +49,21 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
 
   @PostConstruct
   public void init() throws Exception {
+    triggers = new ArrayList<>();
     logger.info("Start initial simter-scheduler...");
     int totalCount = 0;
     // Get all bean with @CronScheduled annotation, then schedule it
     Collection<Object> schedulers = applicationContext.getBeansWithAnnotation(CronScheduled.class).values();
     for (Object v : schedulers) {
       CronScheduled cfg = v.getClass().getAnnotation(CronScheduled.class);
-      String cron = resolver.resolveStringValue(cfg.value());
-      logger.info("Initial cron '{}' for '{}({})'", cron, v.getClass().getName(), v.hashCode());
+      String cron = resolver.resolveStringValue(cfg.cron());
+      String name = resolver.resolveStringValue(cfg.name());
+      String group = resolver.resolveStringValue(cfg.group());
+      logger.info("Initial cron='{}', name='{}', group='{}', method='{}({})#execute'", cron, name, group,
+        v.getClass().getName(), v.hashCode());
 
-      CronTrigger trigger = createCronTrigger(v, "execute", cron); // Fixed to invoke this method name
+      // Fixed to invoke the 'execute' method name
+      CronTrigger trigger = createCronTrigger(v, "execute", cron, name, group);
 
       // keep it for SchedulerFactoryBean initial
       triggers.add(trigger);
@@ -67,17 +72,24 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
 
     // Get all beanMethod with @CronScheduled annotation, then schedule it
     for (String beanName : applicationContext.getBeanDefinitionNames()) {
+      // make sure schedulerFactoryBean init after this method run
+      if (beanName.equalsIgnoreCase("schedulerConfiguration") || beanName.equalsIgnoreCase("schedulerFactoryBean")) {
+        continue;
+      }
+
       Object bean = applicationContext.getBean(beanName);
       Class<?> targetClass = AopUtils.getTargetClass(bean);
       Method[] methods = targetClass.getDeclaredMethods();
       for (Method m : methods) {
         CronScheduled cfg = m.getAnnotation(CronScheduled.class);
         if (cfg != null) {
-          String cron = resolver.resolveStringValue(cfg.value());
-          logger.info("Initial cron '{}' for '{}({})#{}'", cron,
+          String cron = resolver.resolveStringValue(cfg.cron());
+          String name = resolver.resolveStringValue(cfg.name());
+          String group = resolver.resolveStringValue(cfg.group());
+          logger.info("Initial cron='{}', name='{}', group='{}', method='{}({})#{}'", cron, name, group,
             targetClass.getName(), bean.hashCode(), m.getName());
 
-          CronTrigger trigger = createCronTrigger(bean, m.getName(), cron);
+          CronTrigger trigger = createCronTrigger(bean, m.getName(), cron, name, group);
 
           // keep it for SchedulerFactoryBean initial
           triggers.add(trigger);
@@ -92,19 +104,21 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   private int jobId = 0;
   private int triggerId = 0;
 
-  private CronTrigger createCronTrigger(Object bean, String methodName, String cron)
+  private CronTrigger createCronTrigger(Object bean, String methodName, String cron, String name, String group)
     throws ClassNotFoundException, NoSuchMethodException, ParseException {
     // create job
     MethodInvokingJobDetailFactoryBean jobDetail = new MethodInvokingJobDetailFactoryBean();
     jobDetail.setTargetObject(bean);
     jobDetail.setTargetMethod(methodName);
-    jobDetail.setName("simter-job-" + (++jobId));
+    jobDetail.setGroup(group);
+    jobDetail.setName(name == null || name.isEmpty() ? "simter-job-" + (++jobId) : name);
     jobDetail.afterPropertiesSet();
 
     // create job's trigger
     CronTriggerFactoryBean trigger = new CronTriggerFactoryBean();
     trigger.setJobDetail(jobDetail.getObject());
     trigger.setCronExpression(cron);
+    trigger.setGroup(group);
     trigger.setName("simter-trigger-" + (++triggerId));
     trigger.setStartDelay(500); //  delay 500ms
     trigger.setMisfireInstruction(MISFIRE_INSTRUCTION_DO_NOTHING); // avoid twice started
@@ -113,16 +127,18 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   }
 
   /**
-   * Register a {@link SchedulerFactoryBean} bean.
+   * Create a {@link SchedulerFactoryBean} bean.
    * <p>
-   * This method must be invoke after {@link SchedulerConfiguration#init()}, or it will throw
-   * {@link IllegalArgumentException} to notice no usable schedule job to start.
+   * Must make sure this bean init after {@link SchedulerConfiguration#init()} method.
+   * Otherwise no task will be scheduled.
    *
    * @return the schedulerFactory bean
    */
-  @Bean
+  @Bean(name = "schedulerFactoryBean")
+  @DependsOn("jobFactory")
   public SchedulerFactoryBean schedulerFactoryBean() {
-    schedulerFactory = new SchedulerFactoryBean();
+    SchedulerFactoryBean schedulerFactory = new SchedulerFactoryBean();
+    schedulerFactory.setApplicationContext(this.applicationContext);
     schedulerFactory.setJobFactory(jobFactory());
     schedulerFactory.setOverwriteExistingJobs(true);
 
@@ -130,8 +146,10 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
     schedulerFactory.setAutoStartup(true);
     schedulerFactory.setSchedulerName("simter-quartz-scheduler");
 
-    if (!triggers.isEmpty()) schedulerFactory.setTriggers(triggers.toArray(new Trigger[0]));
-    else throw new IllegalArgumentException("No usable schedule job to start.");
+    // important
+    if (triggers.isEmpty()) logger.warn("#### Nothing to schedule ####");
+    schedulerFactory.setTriggers(triggers.toArray(new Trigger[0]));
+
     return schedulerFactory;
   }
 
@@ -140,7 +158,7 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
    *
    * @return the jobFactory bean
    */
-  @Bean
+  @Bean(name = "jobFactory")
   public JobFactory jobFactory() {
     return new AutowiringSpringBeanJobFactory();
   }

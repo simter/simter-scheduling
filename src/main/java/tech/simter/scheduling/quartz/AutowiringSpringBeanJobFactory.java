@@ -9,7 +9,7 @@ import org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SpringBeanJobFactory;
 
 /**
- * A quartz {@link JobFactory} for initial {@link SchedulerConfiguration#schedulerFactoryBean}.
+ * A quartz {@link JobFactory} for initial {@link SchedulerConfiguration}.
  * <p>
  * Target to auto inject spring bean to {@link MethodInvokingJobDetailFactoryBean.MethodInvokingJob}.
  * <p>

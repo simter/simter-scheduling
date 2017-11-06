@@ -16,8 +16,8 @@ public class CronScheduledOnMethod {
   private static Logger logger = LoggerFactory.getLogger(CronScheduledOnMethod.class);
   private int count = 0;
 
-  @CronScheduled("0/1 * * * * ? *") // for config the quartz CronTrigger
-  public void anyName() {
+  @CronScheduled(cron = "0/1 * * * * ? *", name = "${app.name1:testName}") // for config the quartz CronTrigger
+  public void execute() {
     logger.debug("{}({})#execute {} - need to disable me in production", getClass().getName(), this.hashCode(), ++count);
   }
 

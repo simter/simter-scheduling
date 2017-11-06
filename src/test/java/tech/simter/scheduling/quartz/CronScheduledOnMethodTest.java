@@ -16,12 +16,12 @@ import static org.junit.Assert.assertThat;
 @ContextConfiguration(classes = {CronScheduledOnMethod.class, SchedulerConfiguration.class})
 public class CronScheduledOnMethodTest {
   @Inject
-  private CronScheduledOnMethod scheduler;
+  private CronScheduledOnMethod task;
 
   @Test
   public void test() throws InterruptedException {
     int seconds = 2;
     Thread.sleep(seconds * 1000);
-    assertThat(scheduler.getCount(), greaterThanOrEqualTo(seconds));
+    assertThat(task.getCount(), greaterThanOrEqualTo(seconds));
   }
 }

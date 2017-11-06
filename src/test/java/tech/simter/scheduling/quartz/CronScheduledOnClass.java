@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Profile("scheduler")
-@CronScheduled("0/1 * * * * ? *") // for config the quartz CronTrigger
+@CronScheduled(cron = "0/1 * * * * ? *") // for config the quartz CronTrigger
 public class CronScheduledOnClass {
   private static Logger logger = LoggerFactory.getLogger(CronScheduledOnClass.class);
   private int count = 0;
