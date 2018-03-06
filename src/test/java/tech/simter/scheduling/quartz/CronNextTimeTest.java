@@ -1,5 +1,6 @@
 package tech.simter.scheduling.quartz;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.quartz.*;
@@ -18,6 +19,7 @@ import static org.junit.Assert.*;
 @RunWith(SpringRunner.class)
 @ActiveProfiles("scheduler")
 @ContextConfiguration(classes = {CronScheduledOnMethod.class, SchedulerConfiguration.class})
+@Ignore
 public class CronNextTimeTest {
   @Autowired
   private Scheduler scheduler;

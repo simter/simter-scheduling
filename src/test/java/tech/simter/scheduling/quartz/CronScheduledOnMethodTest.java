@@ -1,5 +1,6 @@
 package tech.simter.scheduling.quartz;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.test.context.ActiveProfiles;
@@ -14,6 +15,7 @@ import static org.junit.Assert.assertThat;
 @RunWith(SpringRunner.class)
 @ActiveProfiles("scheduler")
 @ContextConfiguration(classes = {CronScheduledOnMethod.class, SchedulerConfiguration.class})
+@Ignore
 public class CronScheduledOnMethodTest {
   @Inject
   private CronScheduledOnMethod task;
