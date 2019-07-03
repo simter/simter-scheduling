@@ -8,6 +8,7 @@
     <relativePath/>
   </parent>
   <artifactId>simter-scheduling</artifactId>
+  <version>1.1.0</version>
   <packaging>jar</packaging>
   <name>simter-scheduling</name>
   <description>Simter Spring-Scheduling Extension</description>
