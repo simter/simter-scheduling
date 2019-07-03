@@ -3,14 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>tech.simter</groupId>
-    <artifactId>simter-parent</artifactId>
-    <version>${revision}</version>
-    <relativePath>../simter-parent</relativePath>
+    <artifactId>simter-dependencies</artifactId>
+    <version>1.2.0</version>
+    <relativePath/>
   </parent>
   <artifactId>simter-scheduling</artifactId>
   <packaging>jar</packaging>
   <name>simter-scheduling</name>
-  <description>Simter Spring-Scheduling Extention</description>
+  <description>Simter Spring-Scheduling Extension</description>
   <url>https://github.com/simter/simter-scheduling</url>
   <licenses>
     <license>
