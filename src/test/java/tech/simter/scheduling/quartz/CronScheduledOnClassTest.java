@@ -1,29 +1,25 @@
 package tech.simter.scheduling.quartz;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import javax.inject.Inject;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig({CronScheduledOnClass.class, SchedulerConfiguration.class})
 @ActiveProfiles("scheduler")
-@ContextConfiguration(classes = {CronScheduledOnClass.class, SchedulerConfiguration.class})
-@Ignore
-public class CronScheduledOnClassTest {
+@Disabled
+class CronScheduledOnClassTest {
   @Inject
   private CronScheduledOnClass scheduler;
 
   @Test
-  public void test() throws InterruptedException {
+  void test() throws InterruptedException {
     int seconds = 2;
     Thread.sleep(seconds * 1000);
-    assertThat(scheduler.getCount(), greaterThanOrEqualTo(seconds));
+    assertThat(scheduler.getCount()).isGreaterThanOrEqualTo(seconds);
   }
 }

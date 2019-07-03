@@ -1,31 +1,27 @@
 package tech.simter.scheduling.quartz;
 
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.quartz.*;
 import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import java.util.Date;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig({CronScheduledOnMethod.class, SchedulerConfiguration.class})
 @ActiveProfiles("scheduler")
-@ContextConfiguration(classes = {CronScheduledOnMethod.class, SchedulerConfiguration.class})
-@Ignore
-public class CronNextTimeTest {
+@Disabled
+class CronNextTimeTest {
   @Autowired
   private Scheduler scheduler;
 
   @Test
-  public void test() throws InterruptedException, SchedulerException {
+  void test() throws SchedulerException {
     assertFalse(CronExpression.isValidExpression(""));
     assertFalse(CronExpression.isValidExpression("0 0 0"));
     assertFalse(CronExpression.isValidExpression("0 0 0 * *"));
@@ -42,9 +38,9 @@ public class CronNextTimeTest {
         List<? extends Trigger> triggers = scheduler.getTriggersOfJob(jobKey);
         Date prevFireTime = triggers.get(0).getPreviousFireTime();
         Date nextFireTime = triggers.get(0).getNextFireTime();
-        assertThat(jobName, is("testName"));
-        assertThat(jobGroup, is("SIMTER"));
-        assertThat(nextFireTime.getTime() - prevFireTime.getTime(), is(1000L));
+        assertEquals("testName", jobName);
+        assertEquals("SIMTER", jobGroup);
+        assertEquals(1000L, nextFireTime.getTime() - prevFireTime.getTime());
         //System.out.println("groupName=" + jobGroup + ", jobName=" + jobName + " - " + nextFireTime);
       }
     }
