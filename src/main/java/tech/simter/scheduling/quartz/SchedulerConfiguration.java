@@ -79,13 +79,16 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
     // Get all beanMethod with @CronScheduled annotation, then schedule it
     List<String> ignoreBeanNames = this.ignoreBeanNames == null ? null :
       Arrays.stream(this.ignoreBeanNames).collect(Collectors.toList());
+    if (logger.isDebugEnabled()) {
+      logger.debug("ignoreBeanNames={}", ignoreBeanNames.stream().collect(Collectors.joining(", ")));
+    }
     for (String beanName : applicationContext.getBeanDefinitionNames()) {
       // make sure schedulerFactoryBean init after this method run
       if (beanName.equalsIgnoreCase("schedulerConfiguration") || beanName.equalsIgnoreCase("schedulerFactoryBean")
         || (ignoreBeanNames != null && ignoreBeanNames.contains(beanName))) {
         continue;
       }
-
+      logger.debug("Find 'CronScheduled' annotation method from bean {}", beanName);
       Object bean = applicationContext.getBean(beanName);
       Class<?> targetClass = AopUtils.getTargetClass(bean);
       Method[] methods = targetClass.getDeclaredMethods();
@@ -146,6 +149,7 @@ public class SchedulerConfiguration implements ApplicationContextAware, Embedded
   @Bean(name = "schedulerFactoryBean")
   @DependsOn({"schedulerConfiguration", "jobFactory"})
   public SchedulerFactoryBean schedulerFactoryBean() {
+    logger.debug("Start initial 'schedulerFactoryBean'");
     SchedulerFactoryBean schedulerFactory = new SchedulerFactoryBean();
     schedulerFactory.setApplicationContext(this.applicationContext);
     schedulerFactory.setJobFactory(jobFactory());
